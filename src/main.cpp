@@ -84,7 +84,22 @@ int main(int argc, char **argv)
 
         // Do the following:
         //   - Get current time
-        //   - *Check if any processes need to move from NotStarted to Ready (based on elapsed time), and if so put that process in the ready queue
+        std::lock_guard<std::mutex> lock(shared_data->mutex);
+        for (int i = 0; i < config->num_processes; i++)
+        {   
+            uint64_t current_time = currentTime() - start;
+            printf("HERE %d\n", config->num_processes);
+            //   - *Check if any processes need to move from NotStarted to Ready (based on elapsed time), and if so put that process in the ready queue
+            if (current_time >= processes[i]->getStartTime())
+            {
+                processes[i]->setState(Process::State::Ready, current_time);
+                shared_data->ready_queue.push_back(processes[i]);
+            }
+
+
+        }
+        
+        
         //   - *Check if any processes have finished their I/O burst, and if so put that process back in the ready queue
         //   - *Check if any running process need to be interrupted (RR time slice expires or newly ready process has higher priority)
         //   - *Sort the ready queue (if needed - based on scheduling algorithm)
