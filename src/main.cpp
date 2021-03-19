@@ -1,3 +1,6 @@
+/* to run program:
+    ./bin/osscheduler resrc/config_01.txt
+*/
 #include <iostream>
 #include <string>
 #include <list>
@@ -79,31 +82,77 @@ int main(int argc, char **argv)
     int num_lines = 0;
     while (!(shared_data->all_terminated))
     {
+        int counter = 0;
         // Clear output from previous iteration
         clearOutput(num_lines);
 
-        // Do the following:
-        //   - Get current time
-        std::lock_guard<std::mutex> lock(shared_data->mutex);
-        for (int i = 0; i < config->num_processes; i++)
+        for (int i = 0; i < processes.size(); i++)
         {   
-            uint64_t current_time = currentTime() - start;
-            printf("HERE %d\n", config->num_processes);
-            //   - *Check if any processes need to move from NotStarted to Ready (based on elapsed time), and if so put that process in the ready queue
-            if (current_time >= processes[i]->getStartTime())
+            // Get current time
+            uint64_t current_time = currentTime();
+            // *Check if any processes need to move from NotStarted to Ready (based on elapsed time) 
+            // If so put that process in the ready queue
+            if (current_time >= (processes[i]->getStartTime() + start)
+                && processes[i]->getState() == Process::State::NotStarted)
             {
                 processes[i]->setState(Process::State::Ready, current_time);
                 shared_data->ready_queue.push_back(processes[i]);
             }
+            // *Check if any processes have finished I/O burst
+            // If so put the process back in the ready queue
+            //processes[i]->getState() == Process::State::IO && (current_time - processes[i]->getBurstStartTime()) 
 
+            // *Check if any running process need to be interrupted (RR time slice expires or newly ready process has higher priority)
+            // RR time slice expires
+            if (config->algorithm == ScheduleAlgorithm::RR)
+            {
+                if (processes[i]->getState() == Process::State::Running 
+                    && processes[i]->getCpuTime() > config->time_slice)
+                {
+                    processes[i]->interrupt();
+                }
+            }
+            // newly ready process has higher priority
+            // double check this if statment
+            if (processes[i]->getState() == Process::State::Running 
+                && processes[i]->getPriority() > shared_data->ready_queue.front()->getPriority())
+            {
+                processes[i]->interrupt();
+            }
 
+            // *Sort the ready queue (if needed - based on scheduling algorithm)
+            if (config->algorithm == ScheduleAlgorithm::SJF)
+            {
+                SjfComparator cmp;
+                shared_data->ready_queue.sort(cmp);
+            }
+            if (config->algorithm == ScheduleAlgorithm::PP)
+            {
+                PpComparator cmp;
+                shared_data->ready_queue.sort(cmp);
+            }
+            
         }
-        
-        
+        // *Determine if all processes are in the terminated state
+        for (int i = 0; i < processes.size(); i++)
+        {
+            
+            if (processes[i]->getState() == Process::State::Terminated)
+            {
+                counter++;
+            }
+        }
+        if (counter == processes.size())
+        {
+            shared_data->all_terminated == true;
+        }
+        // Do the following:
+        //   - Get current time
+        //   - *Check if any processes need to move from NotStarted to Ready (based on elapsed time), and if so put that process in the ready queue
         //   - *Check if any processes have finished their I/O burst, and if so put that process back in the ready queue
         //   - *Check if any running process need to be interrupted (RR time slice expires or newly ready process has higher priority)
         //   - *Sort the ready queue (if needed - based on scheduling algorithm)
-        //   - Determine if all processes are in the terminated state
+        //   - *Determine if all processes are in the terminated state
         //   - * = accesses shared data (ready queue), so be sure to use proper synchronization
 
         // output process status table
@@ -140,8 +189,13 @@ void coreRunProcesses(uint8_t core_id, SchedulerData *shared_data)
 {
     // Work to be done by each core idependent of the other cores
     // Repeat until all processes in terminated state:
-    //   - *Get process at front of ready queue
-    //   - Simulate the processes running until one of the following:
+    // *Get process at front of ready queue
+    Process *p = shared_data->ready_queue.front();
+    shared_data->ready_queue.pop_front();
+    // Simulate the processes running until one of the following:
+    p->setCpuCore(core_id);
+    //p->setState(Process::State::Running, currentTime());
+
     //     - CPU burst time has elapsed
     //     - Interrupted (RR time slice has elapsed or process preempted by higher priority process)
     //  - Place the process back in the appropriate queue

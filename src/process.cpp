@@ -124,7 +124,14 @@ void Process::updateProcess(uint64_t current_time)
 {
     // use `current_time` to update turnaround time, wait time, burst times, 
     // cpu time, and remaining time
-
+    //remain_time = remain_time - cpu_time;
+    // Turn Time: Total time since creation (until finished)
+    turn_time = current_time - launch_time;
+    // Wait Time: Total time waiting in the ready queue
+    
+    // CPU Time: Total time spent running on a CPU core
+    
+    // Remain Time: CPU time remaining until terminated
 
 
 
@@ -145,8 +152,10 @@ bool SjfComparator::operator ()(const Process *p1, const Process *p2)
     if (p1->getRemainingTime() < p2->getRemainingTime()) 
     {
         return true;
+    } else {
+        return false;
     }
-    return false;
+    
 }
 
 // PP - comparator for sorting read queue based on priority
@@ -155,6 +164,8 @@ bool PpComparator::operator ()(const Process *p1, const Process *p2)
     if (p1->getPriority() < p2->getPriority())
     {
         return true;
-    } 
-    return false;
+    } else {
+        return false;
+    }
+    
 }
