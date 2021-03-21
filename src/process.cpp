@@ -56,6 +56,21 @@ uint64_t Process::getBurstStartTime() const
     return burst_start_time;
 }
 
+uint32_t Process::getBurstTime(int burst_idx) const
+{
+    return burst_times[burst_idx]; 
+}
+
+uint16_t Process::getCurrentBurst() const
+{
+    return current_burst;
+}
+
+uint16_t Process::getNumBursts() const
+{
+    return num_bursts;
+}
+
 Process::State Process::getState() const
 {
     return state;
@@ -96,6 +111,16 @@ void Process::setBurstStartTime(uint64_t current_time)
     burst_start_time = current_time;
 }
 
+void Process::setBurst(uint16_t burst_idx)
+{
+    current_burst = burst_idx;
+}
+
+void Process::nextBurst()
+{
+    current_burst++;
+}
+
 void Process::setState(State new_state, uint64_t current_time)
 {
     if (state == State::NotStarted && new_state == State::Ready)
@@ -124,14 +149,21 @@ void Process::updateProcess(uint64_t current_time)
 {
     // use `current_time` to update turnaround time, wait time, burst times, 
     // cpu time, and remaining time
-    //remain_time = remain_time - cpu_time;
+    uint32_t burst_time_completed = 0;
+    uint32_t cpu_time_completed = 0;
+    for(int i=0; i < current_burst; i++)
+    {
+        burst_time_completed += burst_times[i];
+    }
     // Turn Time: Total time since creation (until finished)
     turn_time = current_time - launch_time;
     // Wait Time: Total time waiting in the ready queue
     
     // CPU Time: Total time spent running on a CPU core
-    
+    cpu_time = (current_time - burst_start_time);
     // Remain Time: CPU time remaining until terminated
+    remain_time = remain_time;
+    // Burst Times
 
 
 
