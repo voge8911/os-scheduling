@@ -1,4 +1,5 @@
 #include "process.h"
+#include "math.h"
 
 // Process class methods
 Process::Process(ProcessDetails details, uint64_t current_time)
@@ -18,6 +19,7 @@ Process::Process(ProcessDetails details, uint64_t current_time)
     if (state == State::Ready)
     {
         launch_time = current_time;
+        ready_queue_start_time = current_time;
     }
     is_interrupted = false;
     core = -1;
@@ -25,10 +27,12 @@ Process::Process(ProcessDetails details, uint64_t current_time)
     wait_time = 0;
     cpu_time = 0;
     remain_time = 0;
+    initial_remain_time = 0;
     for (i = 0; i < num_bursts; i+=2)
     {
         remain_time += burst_times[i];
     }
+    initial_remain_time = remain_time;
 }
 
 Process::~Process()
@@ -106,6 +110,11 @@ double Process::getRemainingTime() const
     return (double)remain_time / 1000.0;
 }
 
+void Process::setRemainingTime(int32_t time)
+{
+    remain_time = time;
+}
+
 void Process::setBurstStartTime(uint64_t current_time)
 {
     burst_start_time = current_time;
@@ -127,6 +136,15 @@ void Process::setState(State new_state, uint64_t current_time)
     {
         launch_time = current_time;
     }
+    if (new_state == State::Ready)
+    {
+        ready_queue_start_time = current_time;
+    }
+    if (state == State::Ready && new_state != State::Ready)
+    {
+        wait_time += (current_time - ready_queue_start_time);
+        //wait_time = ready_queue_start_time;
+    }
     state = new_state;
 }
 
@@ -145,24 +163,51 @@ void Process::interruptHandled()
     is_interrupted = false;
 }
 
+
 void Process::updateProcess(uint64_t current_time)
 {
     // use `current_time` to update turnaround time, wait time, burst times, 
     // cpu time, and remaining time
-    uint32_t burst_time_completed = 0;
+    uint32_t burst_times_completed = 0;
     uint32_t cpu_time_completed = 0;
+    cpu_time = 0;
+    remain_time = 0;
+    turn_time = 0;
+    if (current_burst != 0)
+    {
+        for (int i = 0; i < current_burst; i += 2)
+        {
+            cpu_time_completed += burst_times[i];
+        }
+    }
     for(int i=0; i < current_burst; i++)
     {
-        burst_time_completed += burst_times[i];
+        burst_times_completed += burst_times[i];
     }
-    // Turn Time: Total time since creation (until finished)
-    turn_time = current_time - launch_time;
-    // Wait Time: Total time waiting in the ready queue
     
+    // Turn Time: Total time since creation (until finished)
+    turn_time = (current_time - launch_time);
+    // Wait Time: Total time waiting in the ready queue
+ 
     // CPU Time: Total time spent running on a CPU core
-    cpu_time = (current_time - burst_start_time);
+    if (current_burst%2 == 0)
+    {
+        cpu_time = (current_time - burst_start_time) + cpu_time_completed;
+    }
+    else
+    {
+        cpu_time = cpu_time_completed;
+    }
+    
     // Remain Time: CPU time remaining until terminated
-    remain_time = remain_time;
+    if (state == State::Terminated)
+    {
+        remain_time = 0;
+    }
+    else
+    {
+        remain_time = initial_remain_time - cpu_time;
+    }
     // Burst Times
 
 
