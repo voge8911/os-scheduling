@@ -22,6 +22,7 @@ Process::Process(ProcessDetails details, uint64_t current_time)
         ready_queue_start_time = current_time;
     }
     is_interrupted = false;
+    interrupt_time_completed = 0;
     core = -1;
     turn_time = 0;
     wait_time = 0;
@@ -143,7 +144,6 @@ void Process::setState(State new_state, uint64_t current_time)
     if (state == State::Ready && new_state != State::Ready)
     {
         wait_time += (current_time - ready_queue_start_time);
-        //wait_time = ready_queue_start_time;
     }
     state = new_state;
 }
@@ -172,7 +172,6 @@ void Process::updateProcess(uint64_t current_time)
     uint32_t cpu_time_completed = 0;
     cpu_time = 0;
     remain_time = 0;
-    turn_time = 0;
     if (current_burst != 0)
     {
         for (int i = 0; i < current_burst; i += 2)
@@ -186,17 +185,21 @@ void Process::updateProcess(uint64_t current_time)
     }
     
     // Turn Time: Total time since creation (until finished)
-    turn_time = (current_time - launch_time);
+    if (state != State::Terminated)
+    {
+        turn_time = 0;
+        turn_time = (current_time - launch_time);
+    }
     // Wait Time: Total time waiting in the ready queue
  
     // CPU Time: Total time spent running on a CPU core
     if (current_burst%2 == 0)
     {
-        cpu_time = (current_time - burst_start_time) + cpu_time_completed;
+        cpu_time = (current_time - burst_start_time) + cpu_time_completed + interrupt_time_completed;
     }
     else
     {
-        cpu_time = cpu_time_completed;
+        cpu_time = cpu_time_completed + interrupt_time_completed;
     }
     
     // Remain Time: CPU time remaining until terminated
@@ -215,7 +218,8 @@ void Process::updateProcess(uint64_t current_time)
 }
 
 void Process::updateBurstTime(int burst_idx, uint32_t new_time)
-{
+{   
+    interrupt_time_completed += burst_times[current_burst] - new_time;
     burst_times[burst_idx] = new_time;
 }
 
@@ -229,10 +233,8 @@ bool SjfComparator::operator ()(const Process *p1, const Process *p2)
     if (p1->getRemainingTime() < p2->getRemainingTime()) 
     {
         return true;
-    } else {
-        return false;
     }
-    
+    return false;
 }
 
 // PP - comparator for sorting read queue based on priority
@@ -241,8 +243,6 @@ bool PpComparator::operator ()(const Process *p1, const Process *p2)
     if (p1->getPriority() < p2->getPriority())
     {
         return true;
-    } else {
-        return false;
     }
-    
+    return false;
 }

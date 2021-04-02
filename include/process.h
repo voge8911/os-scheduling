@@ -9,24 +9,24 @@ public:
     enum State : uint8_t { NotStarted, Ready, Running, IO, Terminated };
 
 private:
-    uint16_t pid;                   // process ID
-    uint32_t start_time;            // ms after program starts that process should be 'launched'
-    uint16_t num_bursts;            // number of CPU/IO bursts
-    uint16_t current_burst;         // current index into the CPU/IO burst array
-    uint32_t *burst_times;          // CPU/IO burst array of times (in ms)
-    uint8_t priority;               // process priority (0-4)
-    uint64_t burst_start_time;      // time that the current CPU/IO burst began
-    State state;                    // process state
-    bool is_interrupted;            // whether or not the process is being interrupted
-    int8_t core;                    // CPU core currently running on
-    int32_t turn_time;              // total time since 'launch' (until terminated)
-    int32_t wait_time;              // total time spent in ready queue
-    int32_t cpu_time;               // total time spent running on a CPU core
-    int32_t remain_time;            // CPU time remaining until terminated
-    int32_t initial_remain_time;    // Initial CPU time remaining until terminated
-    int32_t ready_queue_start_time; // Time spent in ready queue
-    uint64_t launch_time;           // actual time in ms (since epoch) that process was 'launched'
-    // you are welcome to add other private data fields here if you so choose
+    uint16_t pid;                       // process ID
+    uint32_t start_time;                // ms after program starts that process should be 'launched'
+    uint16_t num_bursts;                // number of CPU/IO bursts
+    uint16_t current_burst;             // current index into the CPU/IO burst array
+    uint32_t *burst_times;              // CPU/IO burst array of times (in ms)
+    uint8_t priority;                   // process priority (0-4)
+    uint64_t burst_start_time;          // time that the current CPU/IO burst began
+    State state;                        // process state
+    bool is_interrupted;                // whether or not the process is being interrupted
+    int8_t core;                        // CPU core currently running on
+    int32_t interrupt_time_completed;   // total time spent running on CPU before process was interupted
+    int32_t turn_time;                  // total time since 'launch' (until terminated)
+    int32_t wait_time;                  // total time spent in ready queue
+    int32_t cpu_time;                   // total time spent running on a CPU core
+    int32_t remain_time;                // CPU time remaining until terminated
+    int32_t initial_remain_time;        // Initial CPU time remaining until terminated
+    int32_t ready_queue_start_time;     // Time spent in ready queue
+    uint64_t launch_time;               // actual time in ms (since epoch) that process was 'launched'
 
 public:
     Process(ProcessDetails details, uint64_t current_time);

@@ -7,9 +7,16 @@
 #include <fstream>
 #include <sstream>
 
-enum ScheduleAlgorithm : uint8_t { FCFS, SJF, RR, PP };
+enum ScheduleAlgorithm : uint8_t
+{
+    FCFS,
+    SJF,
+    RR,
+    PP
+};
 
-typedef struct ProcessDetails {
+typedef struct ProcessDetails
+{
     uint16_t pid;
     uint32_t start_time;
     uint16_t num_bursts;
@@ -17,7 +24,8 @@ typedef struct ProcessDetails {
     uint8_t priority;
 } ProcessDetails;
 
-typedef struct SchedulerConfig {
+typedef struct SchedulerConfig
+{
     uint8_t cores;
     ScheduleAlgorithm algorithm;
     uint32_t context_switch;
@@ -26,7 +34,7 @@ typedef struct SchedulerConfig {
     ProcessDetails *processes;
 } SchedulerConfig;
 
-SchedulerConfig* readConfigFile(const char *filename);
+SchedulerConfig *readConfigFile(const char *filename);
 void deleteConfig(SchedulerConfig *config);
 
 #endif // __CONFIGREADER_H_
