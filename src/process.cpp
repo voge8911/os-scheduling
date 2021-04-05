@@ -168,7 +168,6 @@ void Process::updateProcess(uint64_t current_time)
 {
     // use `current_time` to update turnaround time, wait time, burst times, 
     // cpu time, and remaining time
-    uint32_t burst_times_completed = 0;
     uint32_t cpu_time_completed = 0;
     cpu_time = 0;
     remain_time = 0;
@@ -179,19 +178,14 @@ void Process::updateProcess(uint64_t current_time)
             cpu_time_completed += burst_times[i];
         }
     }
-    for(int i=0; i < current_burst; i++)
-    {
-        burst_times_completed += burst_times[i];
-    }
-    
     // Turn Time: Total time since creation (until finished)
     if (state != State::Terminated)
     {
         turn_time = 0;
         turn_time = (current_time - launch_time);
     }
-    // Wait Time: Total time waiting in the ready queue
- 
+    // Wait Time: Updated in setState() function
+    
     // CPU Time: Total time spent running on a CPU core
     if (current_burst%2 == 0)
     {
@@ -211,10 +205,7 @@ void Process::updateProcess(uint64_t current_time)
     {
         remain_time = initial_remain_time - cpu_time;
     }
-    // Burst Times
-
-
-
+    // Burst Times: updates in updateBurstTime() function
 }
 
 void Process::updateBurstTime(int burst_idx, uint32_t new_time)

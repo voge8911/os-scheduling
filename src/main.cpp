@@ -98,9 +98,16 @@ int main(int argc, char **argv)
                 {
                     std::lock_guard<std::mutex> lock(shared_data->mutex);
                     shared_data->ready_queue.push_back(processes[i]);
+                    // Sort ready queue if Preemptive Priority
+                    if (shared_data->ready_queue.size() > 1)
+                    {
+                        if (shared_data->algorithm == ScheduleAlgorithm::PP)
+                        {
+                            shared_data->ready_queue.sort(PpComparator());
+                        }
+                    }
                 }
             }
-            //processes[i]->updateProcess(currentTime());
             // *Check if any processes have finished I/O burst
             if (processes[i]->getState() == Process::State::IO &&
                 (currentTime() - processes[i]->getBurstStartTime()) > processes[i]->getBurstTime(processes[i]->getCurrentBurst()))
@@ -110,6 +117,14 @@ int main(int argc, char **argv)
                 {
                     std::lock_guard<std::mutex> lock(shared_data->mutex);
                     shared_data->ready_queue.push_back(processes[i]);
+                    // Sort ready queue if Preemptive Priority
+                    if (shared_data->ready_queue.size() > 1)
+                    {
+                        if (shared_data->algorithm == ScheduleAlgorithm::PP)
+                        {
+                            shared_data->ready_queue.sort(PpComparator());
+                        }
+                    }
                 }
             }
             // *Check if any running process need to be interrupted
@@ -150,14 +165,7 @@ int main(int argc, char **argv)
         {
             shared_data->all_terminated = true;
         }
-        // Do the following:
-        //   - Get current time
-        //   - *Check if any processes need to move from NotStarted to Ready (based on elapsed time), and if so put that process in the ready queue
-        //   - *Check if any processes have finished their I/O burst, and if so put that process back in the ready queue
-        //   - *Check if any running process need to be interrupted (RR time slice expires or newly ready process has higher priority)
-        //   - *Sort the ready queue (if needed - based on scheduling algorithm)
-        //   - *Determne if all processes are in the terminated state
-        //   - * = accesses shared data (ready queue), so be sure to use proper synchronization
+        // * = accesses shared data (ready queue), use proper synchronization
 
         // output process status table
         num_lines = printProcessOutput(processes, shared_data->mutex);
@@ -214,6 +222,7 @@ int main(int argc, char **argv)
 
     // Clean up before quitting program
     processes.clear();
+    turnaround_times.clear();
 
     return 0;
 }
@@ -246,9 +255,9 @@ void coreRunProcesses(uint8_t core_id, SchedulerData *shared_data)
             // Simulate the processes running
             // delay 50 ms
             usleep(50000);
+            // update process
             p->updateProcess(currentTime());
             time_since_burst_started = currentTime() - p->getBurstStartTime();
-            std::lock_guard<std::mutex> lock(shared_data->mutex);
             // Stop running process if...
             // CPU burst time has elapsed
             if (time_since_burst_started >= p->getBurstTime(p->getCurrentBurst()))
@@ -277,8 +286,11 @@ void coreRunProcesses(uint8_t core_id, SchedulerData *shared_data)
                 // Modify the CPU burst time to now reflect the remaining time
                 p->updateBurstTime(p->getCurrentBurst(), p->getBurstTime(p->getCurrentBurst()) - time_since_burst_started);
                 // Place the process back in *Ready queue if interrupted
-                p->setState(Process::State::Ready, currentTime());
-                shared_data->ready_queue.push_back(p);
+                {
+                    std::lock_guard<std::mutex> lock(shared_data->mutex);
+                    p->setState(Process::State::Ready, currentTime());
+                    shared_data->ready_queue.push_back(p);
+                }
                 p->setCpuCore(-1);
                 p->interruptHandled();
                 break;
